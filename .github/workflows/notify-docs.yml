@@ -1,5 +1,6 @@
 name: Notify docs portal
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths: ["docs/**"]
@@ -8,8 +9,11 @@ permissions:
 jobs:
   notify:
     runs-on: ubuntu-latest
+    env:
+      PORTAL_TOKEN: ${{ secrets.DOCS_PORTAL_TOKEN }}
     steps:
       - name: Dispatch portal rebuild
+        if: env.PORTAL_TOKEN != ''
         uses: actions/github-script@v7
         env:
           PORTAL_REPOSITORY: ${{ vars.DOCS_PORTAL_REPOSITORY }}
@@ -25,4 +29,6 @@ jobs:
               owner, repo, event_type: 'docs-updated',
               client_payload: {repository: context.repo.owner + '/' + context.repo.repo, sha: context.sha}
             });
-
+      - name: Scheduled synchronization fallback
+        if: env.PORTAL_TOKEN == ''
+        run: echo 'No dedicated dispatch token configured. docs-portal checks source SHAs every 15 minutes; workflow_dispatch is available for an immediate rebuild.'
