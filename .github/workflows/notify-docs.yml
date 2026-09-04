@@ -1,0 +1,28 @@
+name: Notify docs portal
+on:
+  push:
+    branches: [main]
+    paths: ["docs/**"]
+permissions:
+  contents: read
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch portal rebuild
+        uses: actions/github-script@v7
+        env:
+          PORTAL_REPOSITORY: ${{ vars.DOCS_PORTAL_REPOSITORY }}
+        with:
+          github-token: ${{ secrets.DOCS_PORTAL_TOKEN }}
+          script: |
+            const target = process.env.PORTAL_REPOSITORY;
+            if (!/^[A-Za-z0-9_-]+\/[A-Za-z0-9_.-]+$/.test(target || '')) {
+              throw new Error('Set DOCS_PORTAL_REPOSITORY=owner/docs-portal');
+            }
+            const [owner, repo] = target.split('/');
+            await github.rest.repos.createDispatchEvent({
+              owner, repo, event_type: 'docs-updated',
+              client_payload: {repository: context.repo.owner + '/' + context.repo.repo, sha: context.sha}
+            });
+
